@@ -57,6 +57,7 @@ app.post("/api/projects/:id/ai/patch-plan",async(req,res,next)=>{
       const file=await readProjectFile(workspace,req.params.id,filePath);
       currentFiles.push({path:file.path,content:file.content});
     }
+    if(Buffer.byteLength(JSON.stringify(currentFiles),"utf8")>45000)return res.status(413).json({error:"Konteks file AI melebihi 45 KB. Pilih lebih sedikit file atau file yang lebih kecil agar AI tidak memotong kode dan merusak bagian yang tidak terlihat."});
     const learnedContext=await loadRelevantLearning(workspace,request);
     const result=await proposeProjectPatch({request,currentFiles,learnedContext});
     await recordAiLearning(workspace,{request,summary:result.proposal?.summary||"Request analyzed; no code change proposed.",fileTypes:currentFiles.map(file=>path.extname(file.path)),approved:false});
