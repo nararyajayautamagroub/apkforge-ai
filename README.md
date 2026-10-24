@@ -10,6 +10,7 @@ APKForge AI is a browser-based workbench for inspecting Android package archives
 - APK decode into a workspace using Apktool, when Apktool and Java are installed on the host.
 - Project file listing and editing for selected text formats (XML, JSON, text, properties, Smali, HTML, JS, CSS, Java/Kotlin, YAML and config files), limited to 2 MiB per file.
 - Rebuild decoded projects into an **unsigned APK** using Apktool.
+- Optional APK signing and signature verification using a keystore configured on the server.
 - AI change-plan endpoint compatible with chat-completions style providers.
 - AI patch proposals for a selected editable file, with path/content validation and a review step before the user explicitly applies the proposal.
 - Allowlisted process helper for Apktool, JADX, and apksigner.
@@ -46,6 +47,8 @@ Set `AI_BASE_URL`, `AI_API_KEY`, and `AI_MODEL` in `.env` for an OpenAI-compatib
 - `PUT /api/projects/:id/file` — JSON body: `{ "path": "res/values/strings.xml", "content": "..." }`.
 - `POST /api/projects/:id/build` — build unsigned APK.
 - `GET /api/projects/:id/artifact` — download generated unsigned APK.
+- `POST /api/projects/:id/sign` — sign the generated APK using server-configured keystore credentials and verify the signature.
+- `GET /api/projects/:id/signed-artifact` — download the signed APK.
 - `POST /api/ai/plan` — generate a change plan from JSON `{ "request": "..." }`.
 - `POST /api/projects/:id/undo` — restore the latest backup of a text file.
 - `PUT /api/projects/:id/asset` — replace a supported binary asset with multipart fields `path` and `file`.
@@ -54,7 +57,7 @@ Set `AI_BASE_URL`, `AI_API_KEY`, and `AI_MODEL` in `.env` for an OpenAI-compatib
 
 ## Current limitations (read before production)
 
-This is a functional development workflow, **not a completed universal APK modder**. Decode/build depends on the host having Apktool and Java installed. Rebuilt output is unsigned. The project editor edits text files only; it does not automatically replace 3D models, textures, vehicle assets, or arbitrary binary resources. The AI planner creates plans, and the patch endpoint proposes edits to selected text files. A proposal requires manual review and explicit confirmation before it is saved; this is not an autonomous feature generator. Asset replacement is format-agnostic at the file level and cannot guarantee game-specific model/texture compatibility.
+This is a functional development workflow, **not a completed universal APK modder**. Decode/build depends on the host having Apktool and Java installed. Rebuilt output is unsigned until the optional signing workflow is configured with a keystore you control. Never commit keystores or passwords. The project editor edits text files only; it does not automatically replace 3D models, textures, vehicle assets, or arbitrary binary resources. The AI planner creates plans, and the patch endpoint proposes edits to selected text files. A proposal requires manual review and explicit confirmation before it is saved; this is not an autonomous feature generator. Asset replacement is format-agnostic at the file level and cannot guarantee game-specific model/texture compatibility.
 
 The project can be packaged as its own Windows `.exe` installer and `.msi` installer, and as an Android debug `.apk`. These are APKForge AI app builds, not automatic conversion of an uploaded APK into Windows binaries. An APK cannot be directly converted into a native Windows EXE. The Android APK bundles the dashboard UI; the processing API must be hosted on a reachable HTTPS server and configured in the app. OBB files may be proprietary, encrypted, or game-specific; generic archive preview cannot interpret all OBB data.
 
