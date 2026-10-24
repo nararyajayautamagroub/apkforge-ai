@@ -88,7 +88,10 @@ app.post("/api/ai/plan",async(req,res,next)=>{
     const request=String(req.body?.request||"").trim();
     if(!request)return res.status(400).json({error:"Describe the feature you want to add."});
     if(request.length>8000)return res.status(400).json({error:"Prompt must be 8,000 characters or fewer."});
-    res.json(await proposePatch({request,fileInventory:Array.isArray(req.body?.fileInventory)?req.body.fileInventory.slice(0,1000):[],currentFiles:Array.isArray(req.body?.currentFiles)?req.body.currentFiles.slice(0,50):[]}));
+    const learnedContext=await loadRelevantLearning(workspace,request);
+    const result=await proposePatch({request,fileInventory:Array.isArray(req.body?.fileInventory)?req.body.fileInventory.slice(0,1000):[],currentFiles:Array.isArray(req.body?.currentFiles)?req.body.currentFiles.slice(0,50):[],learnedContext});
+    await recordAiLearning(workspace,{request,summary:"Feature planning request; not yet confirmed as implemented.",approved:false});
+    res.json({...result,learning:{usedExamples:learnedContext.length,mode:"local-approved-patterns"}});
   }catch(error){next(error);}
 });
 app.get("/api/formats",(_req,res)=>res.json({import:[".apk",".apks",".aab",".obb",".zip",".apfproj",".exe",".msi"],export:[".apk"],buildTargets:[".apk",".exe",".msi"],notes:{exe:"Requires a separate Windows port or compatible wrapper; APK cannot be directly converted to a native EXE.",mau:"Custom/unspecified format; a format specification or target application is required."}}));
