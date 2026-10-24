@@ -13,7 +13,8 @@ This checklist separates features that currently work in the development workflo
 - [ ] Add authentication and authorization to every project, upload, build, signing, AI, and undo endpoint.
 - [ ] Enforce per-user workspace isolation; never let one user access another user's upload, project, backups, or artifacts.
 - [x] Enforce a default 100 MiB upload-size cap in the API; operators can override it with `MAX_UPLOAD_BYTES`.
-- [ ] Configure request rate limits at the application and reverse proxy.
+- [x] Add configurable per-process API rate limiting (default 120 requests per 60 seconds per IP; `/api/health` excluded) and apply the configured upload cap to asset uploads.
+- [ ] Configure a shared/distributed limiter and request rate limits at the reverse proxy before multi-instance/public deployment.
 - [ ] Run Android tooling in a disposable, resource-limited sandbox with network access disabled where possible.
 - [ ] Keep API keys and keystore credentials in a secret manager/environment, never in source control or client-side code.
 - [ ] Add malware scanning, retention/cleanup policies, audit logs, and quotas before accepting untrusted public uploads.
@@ -32,6 +33,11 @@ This checklist separates features that currently work in the development workflo
 - [ ] Add diff preview, staged patch validation, transactional multi-file apply, and rollback tests for AI proposals.
 - [ ] Add configurable provider timeouts, response-size limits, structured-output validation, and user-visible AI error states.
 - [ ] Add platform-specific testing for Windows installers and the Android shell on real devices.
+
+## Rate-limit configuration
+- `API_RATE_MAX` sets the allowed requests per IP per window (default `120`).
+- `API_RATE_WINDOW_MS` sets the window length in milliseconds (default `60000`).
+- The in-memory limiter is per process and is not a substitute for a shared store or reverse-proxy protection on a public, multi-instance deployment. Avoid enabling `trust proxy` unless the proxy chain is explicitly configured.
 
 ## Important limitations
 - The generated Android package is a dashboard shell. Processing features require a separately hosted, reachable HTTPS API.
