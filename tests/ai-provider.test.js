@@ -83,3 +83,86 @@ test("AI provider response is rejected when it exceeds the configured byte limit
     /exceeds the configured 1024-byte limit/
   );
 });
+
+
+test("AI provider configuration is reported as unavailable without credentials", async () => {
+  configureAi();
+  delete process.env.AI_API_KEY;
+  const result = await proposePatch({ request: "Add a feature" });
+  assert.equal(result.configured, false);
+  assert.match(result.message, /AI_API_KEY/);
+});
+
+test("AI provider HTTP failures are surfaced without parsing the response as a proposal", async () => {
+  configureAi();
+  globalThis.fetch = async () => new Response("provider unavailable", { status: 503 });
+  await assert.rejects(
+    () => proposePatch({ request: "Add a feature" }),
+    /AI provider returned HTTP 503/
+  );
+});
+
+test("AI provider invalid JSON is rejected with a bounded parser error", async () => {
+  configureAi();
+  globalThis.fetch = async () => new Response("{invalid", { status: 200 });
+  await assert.rejects(
+    () => proposePatch({ request: "Add a feature" }),
+    /AI provider returned invalid JSON/
+  );
+});
+
+test("project AI planner accepts a valid proposal for an exact editable path", async () => {
+  configureAi();
+  mockProvider(JSON.stringify({
+    summary: "Improve the home page",
+    assumptions: ["Keep existing layout"],
+    files: [{
+      path: "public/index.html",
+      proposedContent: "<main>Updated</main>",
+      rationale: "Add the requested content"
+    }],
+    risks: [],
+    tests: ["Open the page"]
+  }));
+  const result = await proposeProjectPatch({
+    request: "Improve the home page",
+    currentFiles: [{ path: "public/index.html", content: "<main>Old</main>" }]
+  });
+  assert.equal(result.configured, true);
+  assert.equal(result.proposal.summary, "Improve the home page");
+  assert.equal(result.proposal.files[0].path, "public/index.html");
+  assert.equal(result.proposal.files[0].proposedContent, "<main>Updated</main>");
+});
+
+test("project AI planner rejects duplicate paths in one proposal", async () => {
+  configureAi();
+  mockProvider(JSON.stringify({
+    summary: "Duplicate changes",
+    files: [
+      { path: "public/index.html", proposedContent: "one" },
+      { path: "public/index.html", proposedContent: "two" }
+    ]
+  }));
+  await assert.rejects(
+    () => proposeProjectPatch({
+      request: "Change the page",
+      currentFiles: [{ path: "public/index.html", content: "current" }]
+    }),
+    /duplicate file path/
+  );
+});
+
+test("project AI planner rejects non-string proposed file content", async () => {
+  configureAi();
+  mockProvider(JSON.stringify({
+    summary: "Invalid content",
+    files: [{ path: "public/index.html", proposedContent: { html: "not a string" } }]
+  }));
+  await assert.rejects(
+    () => proposeProjectPatch({
+      request: "Change the page",
+      currentFiles: [{ path: "public/index.html", content: "current" }]
+    }),
+    /content is invalid or exceeds 2 MiB/
+  );
+});
