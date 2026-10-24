@@ -11,7 +11,7 @@ export function runAndroidTool(tool, args, { cwd, timeoutMs = 300000, env: extra
     throw new Error("Only explicitly scoped APKForge environment variables may be passed to tools");
   }
   return new Promise((resolve,reject)=>{
-    const child=spawn(TOOL_NAMES[tool],args,{cwd:cwd?path.resolve(cwd):undefined,shell:false,stdio:["ignore","pipe","pipe"],env:{PATH:process.env.PATH||"",HOME:process.env.HOME||"",...extraEnv}});
+    const child=spawn(TOOL_NAMES[tool],args,{cwd:cwd?path.resolve(cwd):undefined,shell:false,stdio:["ignore","pipe","pipe"],env:{PATH:process.env.PATH||"",HOME:process.env.HOME||"",JAVA_HOME:process.env.JAVA_HOME||"",ANDROID_HOME:process.env.ANDROID_HOME||"",ANDROID_SDK_ROOT:process.env.ANDROID_SDK_ROOT||"",TMP:process.env.TMP||"",TEMP:process.env.TEMP||"",...extraEnv}});
     let stdout="",stderr="";
     const timer=setTimeout(()=>child.kill("SIGKILL"),timeoutMs);
     child.stdout.on("data",chunk=>{stdout+=chunk.toString();});
