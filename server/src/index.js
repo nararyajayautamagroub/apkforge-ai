@@ -7,6 +7,7 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import { validateUploadName, storeUpload } from "./services/archive.js";
 import { proposePatch, proposeProjectPatch } from "./services/ai.js";
+import { loadRelevantLearning, recordAiLearning } from "./services/ai-memory.js";
 import { inspectUploadedArchive } from "./services/inspect.js";
 import { decodeApk, listProjectFiles, readProjectFile, editProjectFile, undoProjectFile, replaceProjectAsset, undoProjectAsset, buildApk, signBuiltApk } from "./services/project.js";
 import { fileURLToPath } from "node:url";
@@ -56,7 +57,20 @@ app.post("/api/projects/:id/ai/patch-plan",async(req,res,next)=>{
       const file=await readProjectFile(workspace,req.params.id,filePath);
       currentFiles.push({path:file.path,content:file.content});
     }
-    res.json(await proposeProjectPatch({request,currentFiles}));
+    const learnedContext=await loadRelevantLearning(workspace,request);
+    const result=await proposeProjectPatch({request,currentFiles,learnedContext});
+    await recordAiLearning(workspace,{request,summary:result.proposal?.summary||"Request analyzed; no code change proposed.",fileTypes:currentFiles.map(file=>path.extname(file.path)),approved:false});
+    res.json({...result,learning:{usedExamples:learnedContext.length,mode:"local-approved-patterns"} });
+  }catch(error){next(error);}
+});
+app.post("/api/ai/learn",async(req,res,next)=>{
+  try{
+    const request=String(req.body?.request||"").trim();
+    const summary=String(req.body?.summary||"").trim();
+    const fileTypes=Array.isArray(req.body?.fileTypes)?req.body.fileTypes.slice(0,8):[];
+    if(!request)return res.status(400).json({error:"Provide the original AI request."});
+    if(request.length>8000||summary.length>2000)return res.status(400).json({error:"Request or summary is too long."});
+    res.status(201).json(await recordAiLearning(workspace,{request,summary,fileTypes,approved:true}));
   }catch(error){next(error);}
 });
 app.get("/api/projects/:id/artifact",async(req,res,next)=>{ try { if(!/^[0-9a-f-]{36}$/i.test(req.params.id))return res.status(400).json({error:"Invalid project id."}); const artifact=path.join(workspace,"builds",req.params.id+"-unsigned.apk"); await fs.access(artifact); res.download(artifact,path.basename(artifact)); } catch(error) { next(error); } });
