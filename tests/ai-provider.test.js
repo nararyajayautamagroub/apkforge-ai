@@ -1,0 +1,85 @@
+import test from "node:test";
+import assert from "node:assert/strict";
+import { proposePatch, proposeProjectPatch } from "../server/src/services/ai.js";
+
+const originalEnv = { ...process.env };
+const originalFetch = globalThis.fetch;
+
+function configureAi() {
+  process.env.AI_BASE_URL = "https://ai.example.test/v1/chat/completions";
+  process.env.AI_API_KEY = "test-key";
+  process.env.AI_MODEL = "test-model";
+  delete process.env.AI_MAX_RESPONSE_BYTES;
+  delete process.env.AI_TIMEOUT_MS;
+}
+
+function mockProvider(content, options = {}) {
+  globalThis.fetch = async (_url, init) => {
+    assert.equal(init.method, "POST");
+    assert.match(init.headers.Authorization, /^Bearer /);
+    return new Response(JSON.stringify({
+      choices: [{ message: { content } }]
+    }), { status: options.status || 200, headers: options.headers });
+  };
+}
+
+test.afterEach(() => {
+  globalThis.fetch = originalFetch;
+  for (const key of ["AI_BASE_URL", "AI_API_KEY", "AI_MODEL", "AI_MAX_RESPONSE_BYTES", "AI_TIMEOUT_MS"]) {
+    if (Object.hasOwn(originalEnv, key)) process.env[key] = originalEnv[key];
+    else delete process.env[key];
+  }
+});
+
+test("legacy AI planner accepts a valid structured proposal", async () => {
+  configureAi();
+  mockProvider(JSON.stringify({
+    summary: "Update a source file",
+    files_to_change: ["src/main.js"],
+    patch: { "src/main.js": "updated" },
+    risks: [],
+    tests: ["Run tests"]
+  }));
+  const result = await proposePatch({ request: "Update source", fileInventory: [] });
+  assert.equal(result.configured, true);
+  const proposal = JSON.parse(result.proposal);
+  assert.equal(proposal.summary, "Update a source file");
+  assert.deepEqual(proposal.files_to_change, ["src/main.js"]);
+});
+
+test("legacy AI planner rejects missing required fields", async () => {
+  configureAi();
+  mockProvider(JSON.stringify({ summary: "Incomplete", files_to_change: [] }));
+  await assert.rejects(
+    () => proposePatch({ request: "Update source" }),
+    /missing required field: patch/
+  );
+});
+
+test("project AI planner rejects a path not present in the editable inventory", async () => {
+  configureAi();
+  mockProvider(JSON.stringify({
+    summary: "Change file",
+    files: [{ path: "../secrets.env", proposedContent: "exposed", rationale: "bad path" }]
+  }));
+  await assert.rejects(
+    () => proposeProjectPatch({
+      request: "Change a file",
+      currentFiles: [{ path: "src/main.js", content: "safe" }]
+    }),
+    /outside the selected editable files/
+  );
+});
+
+test("AI provider response is rejected when it exceeds the configured byte limit", async () => {
+  configureAi();
+  process.env.AI_MAX_RESPONSE_BYTES = "1024";
+  globalThis.fetch = async () => new Response("x".repeat(2048), {
+    status: 200,
+    headers: { "Content-Type": "application/json" }
+  });
+  await assert.rejects(
+    () => proposePatch({ request: "Update source" }),
+    /exceeds the configured 1024-byte limit/
+  );
+});
