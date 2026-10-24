@@ -9,9 +9,9 @@ $("aiPatch").onclick=async()=>{
     if(!data.configured||!data.proposal)throw Error(data.message||"Provider AI belum dikonfigurasi.");
     const file=data.proposal.files.find(item=>item.path===$("projectFile").value);
     if(!file)throw Error(data.proposal.summary||"AI tidak mengusulkan perubahan untuk file ini.");
-    window.pendingAiProposal={path:file.path,content:file.proposedContent};
+    window.pendingAiProposal={path:file.path,content:file.proposedContent,request,summary:data.proposal.summary,fileType:file.path.split(".").pop()||""};
     $("proposalContent").value=file.proposedContent;
-    $("proposalStatus").textContent=data.proposal.summary+" | "+(file.rationale||"Periksa usulan sebelum diterapkan.")+" | Risiko: "+(data.proposal.risks||[]).join("; ")+" | Tes: "+(data.proposal.tests||[]).join("; ");
+    $("proposalStatus").textContent=data.proposal.summary+" | "+(file.rationale||"Periksa usulan sebelum diterapkan.")+" | Asumsi: "+(data.proposal.assumptions||[]).join("; ")+" | Risiko: "+(data.proposal.risks||[]).join("; ")+" | Tes: "+(data.proposal.tests||[]).join("; ")+" | Memori dipakai: "+(data.learning?.usedExamples||0)+" pola disetujui sebelumnya.";
   }catch(error){$("proposalStatus").textContent=error.message}finally{button.disabled=false}
 };
 $("applyProposal").onclick=async()=>{
@@ -23,6 +23,13 @@ $("applyProposal").onclick=async()=>{
     const content=$("proposalContent").value;
     const response=await fetch("/api/projects/"+encodeURIComponent(projectId)+"/file",{method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify({path:proposal.path,content})});
     const data=await response.json();if(!response.ok)throw Error(data.error||"Gagal menerapkan usulan");
-    $("fileContent").value=content;$("projectStatus").textContent=data.message;$("proposalStatus").textContent="Usulan diterapkan. Build dan uji APK sebelum digunakan.";window.pendingAiProposal=null;
+    $("fileContent").value=content;$("projectStatus").textContent=data.message;
+    let learned="";
+    try{
+      const memoryResponse=await fetch("/api/ai/learn",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({request:proposal.request,summary:proposal.summary,fileTypes:["."+proposal.fileType]})});
+      const memoryData=await memoryResponse.json();
+      if(memoryResponse.ok)learned=" Pola request disimpan untuk membantu permintaan serupa berikutnya.";
+    }catch{}
+    $("proposalStatus").textContent="Usulan diterapkan. Build dan uji APK sebelum digunakan."+learned;window.pendingAiProposal=null;
   }catch(error){$("proposalStatus").textContent=error.message}
 };
