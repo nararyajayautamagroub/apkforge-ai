@@ -12,7 +12,8 @@ This checklist separates features that currently work in the development workflo
 ## Priority 0 — Before exposing the API publicly
 - [ ] Add authentication and authorization to every project, upload, build, signing, AI, and undo endpoint.
 - [ ] Enforce per-user workspace isolation; never let one user access another user's upload, project, backups, or artifacts.
-- [ ] Configure an explicit upload-size cap and request rate limits at the application and reverse proxy.
+- [x] Enforce a default 100 MiB upload-size cap in the API; operators can override it with `MAX_UPLOAD_BYTES`.
+- [ ] Configure request rate limits at the application and reverse proxy.
 - [ ] Run Android tooling in a disposable, resource-limited sandbox with network access disabled where possible.
 - [ ] Keep API keys and keystore credentials in a secret manager/environment, never in source control or client-side code.
 - [ ] Add malware scanning, retention/cleanup policies, audit logs, and quotas before accepting untrusted public uploads.
