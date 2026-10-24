@@ -66,14 +66,38 @@ export async function readProjectFile(workspace,id,relativePath) {
   const target=inside(inside(path.join(workspace,"projects"),id),relativePath);
   return {path:relativePath,content:await fs.readFile(target,"utf8"),size:entry.size};
 }
+async function backupFile(workspace,id,relativePath,target) {
+  const backupRoot=inside(path.join(workspace,"backups",id),relativePath);
+  await fs.mkdir(path.dirname(backupRoot),{recursive:true});
+  try { await fs.copyFile(target,backupRoot); }
+  catch(error) { if(error.code!=="ENOENT") throw error; }
+}
 export async function editProjectFile(workspace,id,relativePath,content) {
   if(typeof content!=="string"||Buffer.byteLength(content,"utf8")>MAX_EDIT_BYTES) throw new Error("Edited content must be text up to 2 MiB.");
   await readProjectFile(workspace,id,relativePath);
   const root=inside(path.join(workspace,"projects"),id);
   const target=inside(root,relativePath);
+  await backupFile(workspace,id,relativePath,target);
   await fs.writeFile(target,content,"utf8");
-  return {path:relativePath,size:Buffer.byteLength(content,"utf8"),message:"Text file updated. Rebuild and test the application before use."};
+  return {path:relativePath,size:Buffer.byteLength(content,"utf8"),message:"Text file updated. Previous version backed up; use Undo to restore it."};
 }
+export async function undoProjectFile(workspace,id,relativePath) {
+  await readProjectFile(workspace,id,relativePath);
+  const root=inside(path.join(workspace,"projects"),id);
+  const target=inside(root,relativePath);
+  const backup=inside(path.join(workspace,"backups",id),relativePath);
+  await fs.access(backup);
+  const current=await fs.readFile(target);
+  const stamp=new Date().toISOString().replace(/[:.]/g,"-");
+  const history=inside(path.join(workspace,"history",id),relativePath+"."+stamp+".bak");
+  await fs.mkdir(path.dirname(history),{recursive:true});
+  await fs.writeFile(history,current);
+  await fs.copyFile(backup,target);
+  await fs.rm(backup,{force:true});
+  const restored=await fs.stat(target);
+  return {path:relativePath,size:restored.size,message:"Previous version restored. The replaced version was saved in history."};
+}
+
 export async function buildApk(workspace,id) {
   safeProjectId(id);
   const root=inside(path.join(workspace,"projects"),id);
