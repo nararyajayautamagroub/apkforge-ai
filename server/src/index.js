@@ -8,7 +8,7 @@ import path from "node:path";
 import { validateUploadName, storeUpload } from "./services/archive.js";
 import { proposePatch, proposeProjectPatch } from "./services/ai.js";
 import { inspectUploadedArchive } from "./services/inspect.js";
-import { decodeApk, listProjectFiles, readProjectFile, editProjectFile, buildApk } from "./services/project.js";
+import { decodeApk, listProjectFiles, readProjectFile, editProjectFile, undoProjectFile, buildApk } from "./services/project.js";
 import { fileURLToPath } from "node:url";
 const publicDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../public");
 
@@ -38,6 +38,7 @@ app.post("/api/uploads/:id/decode",async(req,res,next)=>{ try { res.status(201).
 app.get("/api/projects/:id/files",async(req,res,next)=>{ try { res.json(await listProjectFiles(workspace,req.params.id)); } catch(error) { next(error); } });
 app.get("/api/projects/:id/file",async(req,res,next)=>{ try { const filePath=String(req.query.path||""); if(!filePath)return res.status(400).json({error:"Provide a relative file path in the path query."}); res.json(await readProjectFile(workspace,req.params.id,filePath)); } catch(error) { next(error); } });
 app.put("/api/projects/:id/file",async(req,res,next)=>{ try { const filePath=String(req.body?.path||""); if(!filePath)return res.status(400).json({error:"Provide a relative file path."}); res.json(await editProjectFile(workspace,req.params.id,filePath,req.body?.content)); } catch(error) { next(error); } });
+app.post("/api/projects/:id/undo",async(req,res,next)=>{ try { const filePath=String(req.body?.path||""); if(!filePath)return res.status(400).json({error:"Provide a relative file path."}); res.json(await undoProjectFile(workspace,req.params.id,filePath)); } catch(error) { next(error); } });
 app.post("/api/projects/:id/build",async(req,res,next)=>{ try { res.json(await buildApk(workspace,req.params.id)); } catch(error) { next(error); } });
 app.post("/api/projects/:id/ai/patch-plan",async(req,res,next)=>{
   try{
