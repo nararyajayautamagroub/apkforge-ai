@@ -34,3 +34,15 @@ $("undoAsset").onclick=async()=>{
     $("assetStatus").textContent=data.message;
   }catch(error){$("assetStatus").textContent=error.message}
 };
+
+$("signApk").onclick=async()=>{
+  if(!projectId){$("signResult").textContent="Decode dan build APK terlebih dahulu.";return}
+  if(!confirm("Tandatangani APK menggunakan signing key yang dikonfigurasi di server?"))return;
+  const button=$("signApk");button.disabled=true;$("signResult").textContent="Menandatangani dan memverifikasi APK...";
+  try{
+    const response=await fetch("/api/projects/"+encodeURIComponent(projectId)+"/sign",{method:"POST"});
+    const data=await response.json();if(!response.ok)throw Error(data.error||"Signing gagal");
+    $("signResult").textContent=data.message+" "+data.artifact.name+" ("+data.artifact.size+" bytes). ";
+    const link=document.createElement("a");link.href="/api/projects/"+encodeURIComponent(projectId)+"/signed-artifact";link.textContent="Download APK signed";link.style.display="block";link.style.marginTop="8px";$("signResult").append(link);
+  }catch(error){$("signResult").textContent=error.message}finally{button.disabled=false}
+};
