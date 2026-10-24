@@ -17,17 +17,17 @@ const app=express();
 const port=Number(process.env.PORT||8787);
 const host=process.env.HOST||"127.0.0.1";
 const workspace=path.resolve(process.env.WORKSPACE_DIR||"./workspace");
-const maxUploadBytes=Number(process.env.MAX_UPLOAD_BYTES||0);
+const maxUploadBytes=Number(process.env.MAX_UPLOAD_BYTES||100*1024*1024);
 await fs.mkdir(path.join(workspace,"incoming"),{recursive:true});
 app.use(helmet({ contentSecurityPolicy: { directives: { ...helmet.contentSecurityPolicy.getDefaultDirectives(), "script-src": ["'self'", "'unsafe-inline'"], "style-src": ["'self'", "'unsafe-inline'"], "connect-src": ["'self'", "https:", "http://127.0.0.1:*", "http://localhost:*"] } } }));
 app.use(cors({origin:process.env.CORS_ORIGIN||false}));
 app.use(express.json({limit:"2mb"}));
 app.use(express.static(publicDir, { extensions: ["html"] }));
-const upload=multer({dest:path.join(workspace,"incoming"),limits:maxUploadBytes>0?{fileSize:maxUploadBytes,files:1}:{files:1}});
+const upload=multer({dest:path.join(workspace,"incoming"),limits:{fileSize:maxUploadBytes,files:1}});
 const assetUpload=multer({dest:path.join(workspace,"incoming"),limits:{fileSize:100*1024*1024,files:1}});
 
 const serverStartedAt=Date.now();
-app.get("/api/health",(_req,res)=>res.set("Cache-Control","no-store").json({name:"APKForge AI",status:"online",version:"0.1.0",serverTime:new Date().toISOString(),uptimeSeconds:Math.floor((Date.now()-serverStartedAt)/1000),memoryBytes:process.memoryUsage().rss,uploadLimitBytes:maxUploadBytes||null,note:"Null means no application-level cap; infrastructure and disk limits still apply."}));
+app.get("/api/health",(_req,res)=>res.set("Cache-Control","no-store").json({name:"APKForge AI",status:"online",version:"0.1.0",serverTime:new Date().toISOString(),uptimeSeconds:Math.floor((Date.now()-serverStartedAt)/1000),memoryBytes:process.memoryUsage().rss,uploadLimitBytes:maxUploadBytes,note:"Application upload cap is enforced; configure MAX_UPLOAD_BYTES to override."}));
 app.post("/api/uploads",upload.single("file"),async(req,res,next)=>{
   try{
     if(!req.file)return res.status(400).json({error:"Choose a file first."});
