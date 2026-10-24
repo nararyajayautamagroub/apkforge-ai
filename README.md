@@ -1,42 +1,48 @@
 # APKForge AI
 
-AI-assisted APK and OBB inspection workspace for software and game assets you own or are authorized to modify.
+APKForge AI is a browser-based workbench starter for inspecting Android package archives and planning authorized modifications to apps and game assets you own or have permission to edit.
 
-## Current starter implementation
-- FastAPI backend and browser dashboard.
-- Streamed APK, OBB, ZIP, model and texture uploads. There is no application-level upload-size cap; host, proxy, storage and disk limits still apply.
-- ZIP-compatible archive inspection.
-- Optional Apktool APK decode endpoint.
-- Natural-language AI change-plan endpoint using an OpenAI-compatible API.
-- Planned extensions for vehicle asset editing, UI/button editing, rebuild/signing and Windows porting.
+## Implemented in this repository
 
-## Important limitations
-An APK cannot simply be renamed or directly converted to EXE. Android applications rely on Android runtime and APIs; a Windows release usually requires porting or rebuilding a source project. OBB formats may be proprietary, encrypted or game-specific. AI plans are suggestions and do not guarantee arbitrary features can be inserted into compiled apps.
-
-Use only software and assets you have permission to modify. Do not use this project to bypass DRM, licensing, anti-cheat or access controls. Uploaded files are treated as data and are never launched by the server.
-
-## Requirements
-- Python 3.11+
-- Optional Java and Apktool for APK decoding
-- Optional OpenAI-compatible AI API endpoint and key
+- Responsive Indonesian dashboard served by the Node.js API.
+- Upload endpoint for `.apk`, `.apks`, `.aab`, `.obb`, `.zip`, and `.apfproj`.
+- ZIP-compatible archive listing for uploaded files, including APK/AAB and OBB files that are standard ZIP containers.
+- Archive preview caps: 5,000 entries and 2 GiB total declared uncompressed size. Preview does not extract or alter the uploaded file.
+- AI change-plan endpoint compatible with chat-completions style providers.
+- Allowlisted Android tool process helper for Apktool, JADX, and apksigner.
+- Configurable app-level upload size cap. `MAX_UPLOAD_BYTES=0` removes the app-level cap only; host, reverse proxy, storage, memory and disk limits still apply.
 
 ## Run locally
-    python -m venv .venv
-    source .venv/bin/activate
-    pip install -r requirements.txt
-    cp .env.example .env
-    uvicorn app.main:app --reload
 
-On Windows, activate with .venv\Scripts\activate instead of the source command. Open http://127.0.0.1:8000.
+Requirements: Node.js 20 or newer.
 
-Set AI_BASE_URL, AI_API_KEY and AI_MODEL in .env to enable AI planning. Never commit real API keys.
+```bash
+npm install
+cp .env.example .env
+npm run check
+npm run dev
+```
+
+Open `http://127.0.0.1:8787`.
+
+On Windows, use `copy .env.example .env` in Command Prompt if `cp` is unavailable.
+
+## AI configuration
+
+Set `AI_BASE_URL`, `AI_API_KEY`, and `AI_MODEL` in `.env` for an OpenAI-compatible provider. Never commit API keys. Without a provider, the API returns a local planning response rather than performing model-powered code changes.
 
 ## API
-- GET /api/health
-- POST /api/files
-- GET /api/files
-- POST /api/inspect/{file_id}
-- POST /api/decompile/{file_id}
-- POST /api/ai/plan
 
-This is a functional starter, not a promise of automatic universal APK modding. Build, signing, runtime validation, direct asset replacement and native Windows export remain future modules.
+- `GET /api/health` — service status and configured upload limit.
+- `GET /api/formats` — supported input/output notes.
+- `POST /api/uploads` — upload one file using multipart field `file`.
+- `GET /api/uploads/:id/inspect` — list entries in ZIP-compatible uploads.
+- `POST /api/ai/plan` — generate a change plan from JSON `{ "request": "..." }`.
+
+## Important: what is not complete yet
+
+This repository is **not a finished universal APK modder**. It currently uploads and previews archive contents and can produce AI change plans. It does not yet apply arbitrary AI-generated patches, edit Android manifests/resources through a full UI, replace vehicle models/textures in a game-specific format, rebuild and sign modified APKs end-to-end, or generate native Windows EXE/MAU outputs.
+
+An APK cannot be converted directly into a native Windows EXE by renaming or repackaging it. A Windows version generally requires a compatible runtime/wrapper or a separate port. OBB files may use proprietary formats, encryption, or game-specific structures that cannot be edited generically. Those features need the target game's format, suitable toolchain, test fixtures, and runtime verification before they can honestly be marked complete.
+
+Use only files and assets you are authorized to modify. Do not use this project to bypass DRM, licensing, anti-cheat, or access controls. Uploaded files are treated as data and are not executed by the server.
