@@ -11,7 +11,7 @@
     "dev": "node --watch server/src/index.js",
     "start": "node server/src/index.js",
     "worker": "node worker/index.js",
-    "check": "node --check server/src/index.js && node --check server/src/services/archive.js && node --check server/src/services/ai.js && node --check server/src/services/android-tools.js && node --check server/src/services/inspect.js && node --check server/src/services/project.js && node --check public/ai-patch.js && node --check public/asset-tools.js && node --check public/native-bridge.js && node --check electron/main.cjs",
+    "check": "node --check server/src/index.js && node --check server/src/services/archive.js && node --check server/src/services/ai.js && node --check server/src/services/ai-memory.js && node --check server/src/services/android-tools.js && node --check server/src/services/inspect.js && node --check server/src/services/project.js && node --check public/ai-patch.js && node --check public/asset-tools.js && node --check public/native-bridge.js && node --check electron/main.cjs",
     "desktop:dir": "electron-builder --dir",
     "desktop:win": "electron-builder --win nsis msi",
     "android:sync": "cap sync android",
