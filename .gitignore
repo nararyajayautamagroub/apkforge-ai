@@ -9,3 +9,7 @@ dist/
 build/
 *.jks
 *.keystore
+release/
+android/.gradle/
+android/build/
+android/app/build/
