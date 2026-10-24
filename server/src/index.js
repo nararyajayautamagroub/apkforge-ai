@@ -9,7 +9,6 @@ import { validateUploadName, storeUpload } from "./services/archive.js";
 import { proposePatch } from "./services/ai.js";
 import { inspectUploadedArchive } from "./services/inspect.js";
 import { decodeApk, listProjectFiles, readProjectFile, editProjectFile, buildApk } from "./services/project.js";
-import { runAndroidTool } from "./services/android-tools.js";
 import { fileURLToPath } from "node:url";
 const publicDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../public");
 
