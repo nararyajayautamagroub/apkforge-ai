@@ -12,7 +12,8 @@ APKForge AI is a browser-based workbench for inspecting Android package archives
 - Rebuild decoded projects into an **unsigned APK** using Apktool.
 - Optional APK signing and signature verification using a keystore configured on the server.
 - AI change-plan endpoint compatible with chat-completions style providers.
-- AI patch proposals for a selected editable file, with path/content validation and a review step before the user explicitly applies the proposal.
+- AI patch proposals for selected editable text files, with path/content validation, assumptions, risks, suggested tests and a review step before the user explicitly applies the proposal.
+- Persistent local learning memory: stores sanitized request patterns and only reuses patterns from edits the user explicitly approved; similar future requests can use these examples to infer intent with fewer clarification questions. This is retrieval-based memory, not model fine-tuning.
 - Allowlisted process helper for Apktool, JADX, and apksigner.
 - Asset Manager for replacing supported image, texture, model, audio and data assets, with backup/undo.
 - Backup/undo for text file edits and binary asset replacement.
@@ -53,11 +54,12 @@ Set `AI_BASE_URL`, `AI_API_KEY`, and `AI_MODEL` in `.env` for an OpenAI-compatib
 - `POST /api/projects/:id/undo` — restore the latest backup of a text file.
 - `PUT /api/projects/:id/asset` — replace a supported binary asset with multipart fields `path` and `file`.
 - `POST /api/projects/:id/asset/undo` — restore the latest asset backup.
-- `POST /api/projects/:id/ai/patch-plan` — propose a reviewable text-file edit from JSON `{ "request": "...", "paths": ["res/values/strings.xml"] }`. The AI can only propose edits to the selected editable files; the proposal is not applied until the user reviews it and explicitly confirms.
+- `POST /api/projects/:id/ai/patch-plan` — propose a reviewable text-file edit from JSON `{ "request": "...", "paths": ["res/values/strings.xml"] }`. The AI can only propose edits to the selected editable files; the proposal is not applied until the user reviews it and explicitly confirms. Relevant user-approved patterns may be supplied as context.
+- `POST /api/ai/learn` — record an explicitly approved request pattern after an AI-proposed edit has been applied. The server stores sanitized request/summary/file-type metadata, not source-file contents.
 
 ## Current limitations (read before production)
 
-This is a functional development workflow, **not a completed universal APK modder**. Decode/build depends on the host having Apktool and Java installed. Rebuilt output is unsigned until the optional signing workflow is configured with a keystore you control. Never commit keystores or passwords. The project editor edits text files only; it does not automatically replace 3D models, textures, vehicle assets, or arbitrary binary resources. The AI planner creates plans, and the patch endpoint proposes edits to selected text files. A proposal requires manual review and explicit confirmation before it is saved; this is not an autonomous feature generator. Asset replacement is format-agnostic at the file level and cannot guarantee game-specific model/texture compatibility.
+This is a functional development workflow, **not a completed universal APK modder**. Decode/build depends on the host having Apktool and Java installed. Rebuilt output is unsigned until the optional signing workflow is configured with a keystore you control. Never commit keystores or passwords. The project editor edits text files only; it does not automatically replace 3D models, textures, vehicle assets, or arbitrary binary resources. The AI planner creates plans, and the patch endpoint proposes edits to selected text files. A proposal requires manual review and explicit confirmation before it is saved. Approved request patterns are kept in the server workspace and retrieved for similar future requests; this does not train or fine-tune the underlying model, and memory is local to that server/workspace. The AI still cannot implement features whose required source files, APIs, engine hooks, or binary-format specifications are not available. Asset replacement is format-agnostic at the file level and cannot guarantee game-specific model/texture compatibility.
 
 The project can be packaged as its own Windows `.exe` installer and `.msi` installer, and as an Android debug `.apk`. These are APKForge AI app builds, not automatic conversion of an uploaded APK into Windows binaries. An APK cannot be directly converted into a native Windows EXE. The Android APK bundles the dashboard UI; the processing API must be hosted on a reachable HTTPS server and configured in the app. OBB files may be proprietary, encrypted, or game-specific; generic archive preview cannot interpret all OBB data.
 
