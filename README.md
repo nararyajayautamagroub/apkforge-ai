@@ -11,6 +11,7 @@ APKForge AI is a browser-based workbench for inspecting Android package archives
 - Project file listing and editing for selected text formats (XML, JSON, text, properties, Smali, HTML, JS, CSS, Java/Kotlin, YAML and config files), limited to 2 MiB per file.
 - Rebuild decoded projects into an **unsigned APK** using Apktool.
 - AI change-plan endpoint compatible with chat-completions style providers.
+- AI patch proposals for a selected editable file, with path/content validation and a review step before the user explicitly applies the proposal.
 - Allowlisted process helper for Apktool, JADX, and apksigner.
 - GitHub Actions syntax validation.
 
@@ -42,10 +43,11 @@ Set `AI_BASE_URL`, `AI_API_KEY`, and `AI_MODEL` in `.env` for an OpenAI-compatib
 - `POST /api/projects/:id/build` — build unsigned APK.
 - `GET /api/projects/:id/artifact` — download generated unsigned APK.
 - `POST /api/ai/plan` — generate a change plan from JSON `{ "request": "..." }`.
+- `POST /api/projects/:id/ai/patch-plan` — propose a reviewable text-file edit from JSON `{ "request": "...", "paths": ["res/values/strings.xml"] }`. The AI can only propose edits to the selected editable files; the proposal is not applied until the user reviews it and explicitly confirms.
 
 ## Current limitations (read before production)
 
-This is a functional development workflow, **not a completed universal APK modder**. Decode/build depends on the host having Apktool and Java installed. Rebuilt output is unsigned. The project editor edits text files only; it does not automatically replace 3D models, textures, vehicle assets, or arbitrary binary resources. The AI endpoint currently plans changes; it does not apply AI-generated patches automatically. JADX and apksigner helpers are not wired into a complete GUI workflow.
+This is a functional development workflow, **not a completed universal APK modder**. Decode/build depends on the host having Apktool and Java installed. Rebuilt output is unsigned. The project editor edits text files only; it does not automatically replace 3D models, textures, vehicle assets, or arbitrary binary resources. The AI planner creates plans, and the patch endpoint proposes edits to selected text files. A proposal requires manual review and explicit confirmation before it is saved; this is not an autonomous feature generator. JADX and apksigner helpers are not wired into a complete GUI workflow.
 
 An APK cannot be directly converted into a native Windows EXE. A Windows release generally requires porting or rebuilding for Windows or a compatible wrapper/runtime. OBB files may be proprietary, encrypted, or game-specific; generic archive preview cannot interpret all OBB data.
 
