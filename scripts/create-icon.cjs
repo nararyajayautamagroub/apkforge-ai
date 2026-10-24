@@ -23,7 +23,7 @@ icon.writeUInt8(0, 9);
 icon.writeUInt16LE(1, 10);
 icon.writeUInt16LE(32, 12);
 icon.writeUInt32LE(iconSize, 14);
-icon.writeUInt32LE(pixelOffset, 18);
+icon.writeUInt32LE(22, 18);
 icon.writeUInt32LE(dibSize, 22);
 icon.writeInt32LE(size, 26);
 icon.writeInt32LE(size * 2, 30);
