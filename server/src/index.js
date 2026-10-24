@@ -67,6 +67,6 @@ app.post("/api/ai/plan",async(req,res,next)=>{
     res.json(await proposePatch({request,fileInventory:Array.isArray(req.body?.fileInventory)?req.body.fileInventory.slice(0,1000):[],currentFiles:Array.isArray(req.body?.currentFiles)?req.body.currentFiles.slice(0,50):[]}));
   }catch(error){next(error);}
 });
-app.get("/api/formats",(_req,res)=>res.json({import:[".apk",".apks",".aab",".obb",".zip",".apfproj"],export:[".apk",".apfproj"],notes:{exe:"Requires a separate Windows port or compatible wrapper; APK cannot be directly converted to a native EXE.",mau:"Custom/unspecified format; a format specification or target application is required."}}));
+app.get("/api/formats",(_req,res)=>res.json({import:[".apk",".apks",".aab",".obb",".zip",".apfproj",".exe",".msi"],export:[".apk",".exe",".msi"],notes:{exe:"Requires a separate Windows port or compatible wrapper; APK cannot be directly converted to a native EXE.",mau:"Custom/unspecified format; a format specification or target application is required."}}));
 app.use((error,_req,res,_next)=>res.status(error instanceof multer.MulterError?413:400).json({error:error.message||"Request failed"}));
 app.listen(port,host,()=>console.log(`APKForge AI API listening on http://${host}:${port}`));
