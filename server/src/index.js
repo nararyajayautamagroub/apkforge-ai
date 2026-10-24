@@ -22,7 +22,8 @@ app.use(helmet({ contentSecurityPolicy: { directives: { ...helmet.contentSecurit
 app.use(cors({origin:process.env.CORS_ORIGIN||false}));
 app.use(express.json({limit:"2mb"}));
 app.use(express.static(publicDir, { extensions: ["html"] }));
-const upload=multer({dest:path.join(workspace,"incoming"),limits:maxUploadBytes>0?{fileSize:maxUploadBytes,files:1}:{files:1}});\nconst assetUpload=multer({dest:path.join(workspace,"incoming"),limits:{fileSize:100*1024*1024,files:1}});
+const upload=multer({dest:path.join(workspace,"incoming"),limits:maxUploadBytes>0?{fileSize:maxUploadBytes,files:1}:{files:1}});
+const assetUpload=multer({dest:path.join(workspace,"incoming"),limits:{fileSize:100*1024*1024,files:1}});
 
 app.get("/api/health",(_req,res)=>res.json({name:"APKForge AI",status:"online",version:"0.1.0",uploadLimitBytes:maxUploadBytes||null,note:"Null means no application-level cap; infrastructure and disk limits still apply."}));
 app.post("/api/uploads",upload.single("file"),async(req,res,next)=>{
