@@ -7,6 +7,7 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import { validateUploadName, storeUpload } from "./services/archive.js";
 import { proposePatch } from "./services/ai.js";
+import { inspectUploadedArchive } from "./services/inspect.js";
 import { fileURLToPath } from "node:url";
 const publicDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../public");
 
@@ -31,6 +32,7 @@ app.post("/api/uploads",upload.single("file"),async(req,res,next)=>{
     res.status(201).json({upload:{id:item.id,name:item.name,extension:item.extension,size:item.size},message:"Upload stored; binaries are not executed or automatically modified."});
   }catch(error){if(req.file?.path)await fs.rm(req.file.path,{force:true}).catch(()=>{});next(error);}
 });
+app.get("/api/uploads/:id/inspect",async(req,res,next)=>{ try { res.json(await inspectUploadedArchive(workspace, req.params.id)); } catch(error) { next(error); } });
 app.post("/api/ai/plan",async(req,res,next)=>{
   try{
     const request=String(req.body?.request||"").trim();
