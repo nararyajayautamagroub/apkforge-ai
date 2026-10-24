@@ -123,7 +123,8 @@ export async function replaceProjectAsset(workspace,id,relativePath,uploadFile) 
   await fs.access(path.join(root,".apkforge-project.json"));
   const target=inside(root,relativePath);
   await fs.mkdir(path.dirname(target),{recursive:true});
-  try { await fs.copyFile(target,inside(path.join(workspace,"backups",id),relativePath)); }
+  const backup=inside(path.join(workspace,"backups",id),relativePath);
+  try { await fs.mkdir(path.dirname(backup),{recursive:true}); await fs.copyFile(target,backup); }
   catch(error) { if(error.code!=="ENOENT") throw error; }
   await fs.rename(uploadFile.path,target);
   const stat=await fs.stat(target);
