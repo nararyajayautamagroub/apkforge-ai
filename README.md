@@ -12,7 +12,7 @@ APKForge AI is a browser-based workbench for inspecting Android package archives
 - Rebuild decoded projects into an **unsigned APK** using Apktool.
 - Optional APK signing and signature verification using a keystore configured on the server.
 - AI change-plan endpoint compatible with chat-completions style providers.
-- AI patch proposals for selected editable text files, with path/content validation, assumptions, risks, suggested tests and a review step before the user explicitly applies the proposal.
+- AI patch proposals across up to five selected editable text files, with per-file review/editing, path/content validation, assumptions, risks, suggested tests, backups and a review step before the user explicitly applies the proposal.
 - Persistent local learning memory: stores sanitized request patterns and only reuses patterns from edits the user explicitly approved; similar future requests can use these examples to infer intent with fewer clarification questions. This is retrieval-based memory, not model fine-tuning.
 - Allowlisted process helper for Apktool, JADX, and apksigner.
 - Asset Manager for replacing supported image, texture, model, audio and data assets, with backup/undo.
@@ -55,6 +55,7 @@ Set `AI_BASE_URL`, `AI_API_KEY`, and `AI_MODEL` in `.env` for an OpenAI-compatib
 - `PUT /api/projects/:id/asset` — replace a supported binary asset with multipart fields `path` and `file`.
 - `POST /api/projects/:id/asset/undo` — restore the latest asset backup.
 - `POST /api/projects/:id/ai/patch-plan` — propose a reviewable text-file edit from JSON `{ "request": "...", "paths": ["res/values/strings.xml"] }`. The AI can only propose edits to the selected editable files; the proposal is not applied until the user reviews it and explicitly confirms. Relevant user-approved patterns may be supplied as context.
+- `POST /api/projects/:id/ai/apply-patch` — apply 1–5 reviewed file changes with validation and backups.
 - `POST /api/ai/learn` — record an explicitly approved request pattern after an AI-proposed edit has been applied. The server stores sanitized request/summary/file-type metadata, not source-file contents.
 
 ## Current limitations (read before production)
