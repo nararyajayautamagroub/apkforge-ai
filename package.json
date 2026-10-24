@@ -11,7 +11,7 @@
     "dev": "node --watch server/src/index.js",
     "start": "node server/src/index.js",
     "worker": "node worker/index.js",
-    "check": "node --check server/src/index.js && node --check server/src/services/archive.js && node --check server/src/services/ai.js && node --check server/src/services/android-tools.js && node --check server/src/services/inspect.js"
+    "check": "node --check server/src/index.js && node --check server/src/services/archive.js && node --check server/src/services/ai.js && node --check server/src/services/android-tools.js && node --check server/src/services/inspect.js && node --check server/src/services/project.js"
   },
   "dependencies": {
     "cors": "^2.8.5",
