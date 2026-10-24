@@ -9,7 +9,7 @@ import { validateUploadName, storeUpload } from "./services/archive.js";
 import { proposePatch, proposeProjectPatch } from "./services/ai.js";
 import { loadRelevantLearning, recordAiLearning } from "./services/ai-memory.js";
 import { inspectUploadedArchive } from "./services/inspect.js";
-import { decodeApk, listProjectFiles, readProjectFile, editProjectFile, undoProjectFile, replaceProjectAsset, undoProjectAsset, buildApk, signBuiltApk } from "./services/project.js";
+import { decodeApk, listProjectFiles, readProjectFile, editProjectFile, undoProjectFile, applyProjectPatch, replaceProjectAsset, undoProjectAsset, buildApk, signBuiltApk } from "./services/project.js";
 import { fileURLToPath } from "node:url";
 const publicDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../public");
 
@@ -61,6 +61,13 @@ app.post("/api/projects/:id/ai/patch-plan",async(req,res,next)=>{
     const result=await proposeProjectPatch({request,currentFiles,learnedContext});
     await recordAiLearning(workspace,{request,summary:result.proposal?.summary||"Request analyzed; no code change proposed.",fileTypes:currentFiles.map(file=>path.extname(file.path)),approved:false});
     res.json({...result,learning:{usedExamples:learnedContext.length,mode:"local-approved-patterns"} });
+  }catch(error){next(error);}
+});
+app.post("/api/projects/:id/ai/apply-patch",async(req,res,next)=>{
+  try{
+    const files=Array.isArray(req.body?.files)?req.body.files:[];
+    if(files.length<1||files.length>5)return res.status(400).json({error:"Submit between 1 and 5 reviewed file edits."});
+    res.json(await applyProjectPatch(workspace,req.params.id,files));
   }catch(error){next(error);}
 });
 app.post("/api/ai/learn",async(req,res,next)=>{
