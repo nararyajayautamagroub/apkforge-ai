@@ -110,3 +110,22 @@ export async function buildApk(workspace,id) {
   const stat=await fs.stat(output);
   return {projectId:id,artifact:{name:path.basename(output),size:stat.size,signed:false},message:"Unsigned APK built. Sign with a key you control, then install and test on a device. Build success does not prove runtime correctness."};
 }
+
+const ASSET_EXTENSIONS = new Set([".png",".jpg",".jpeg",".webp",".ktx",".ktx2",".dds",".obj",".fbx",".gltf",".glb",".bin",".dat",".wav",".ogg",".mp3"]);
+export async function replaceProjectAsset(workspace,id,relativePath,uploadFile) {
+  safeProjectId(id);
+  if(!uploadFile?.path) throw new Error("Choose an asset file.");
+  const ext=path.extname(relativePath).toLowerCase();
+  if(!ASSET_EXTENSIONS.has(ext)) throw new Error("Unsupported asset extension. Supported: images, KTX/DDS textures, OBJ/FBX/GLTF/GLB models and common audio/data files.");
+  if(path.extname(uploadFile.originalname).toLowerCase()!==ext) throw new Error("Uploaded asset extension must match the destination extension.");
+  if(uploadFile.size>100*1024*1024) throw new Error("Asset limit is 100 MiB per file.");
+  const root=inside(path.join(workspace,"projects"),id);
+  await fs.access(path.join(root,".apkforge-project.json"));
+  const target=inside(root,relativePath);
+  await fs.mkdir(path.dirname(target),{recursive:true});
+  try { await fs.copyFile(target,inside(path.join(workspace,"backups",id),relativePath)); }
+  catch(error) { if(error.code!=="ENOENT") throw error; }
+  await fs.rename(uploadFile.path,target);
+  const stat=await fs.stat(target);
+  return {path:relativePath,size:stat.size,message:"Asset replaced. Verify the target game supports this format, encoding, dimensions and internal naming before rebuilding."};
+}
