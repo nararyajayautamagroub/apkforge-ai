@@ -11,7 +11,11 @@
     "dev": "node --watch server/src/index.js",
     "start": "node server/src/index.js",
     "worker": "node worker/index.js",
-    "check": "node --check server/src/index.js && node --check server/src/services/archive.js && node --check server/src/services/ai.js && node --check server/src/services/android-tools.js && node --check server/src/services/inspect.js && node --check server/src/services/project.js && node --check public/ai-patch.js"
+    "check": "node --check server/src/index.js && node --check server/src/services/archive.js && node --check server/src/services/ai.js && node --check server/src/services/android-tools.js && node --check server/src/services/inspect.js && node --check server/src/services/project.js && node --check public/ai-patch.js",
+    "desktop:dir": "electron-builder --dir",
+    "desktop:win": "electron-builder --win nsis msi",
+    "android:sync": "cap sync android",
+    "android:open": "cap open android"
   },
   "dependencies": {
     "cors": "^2.8.5",
@@ -20,6 +24,57 @@
     "helmet": "^8.0.0",
     "multer": "^2.0.0",
     "zod": "^3.24.1",
-    "yauzl": "^3.2.0"
+    "yauzl": "^3.2.0",
+    "@capacitor/core": "^7.4.3",
+    "@capacitor/android": "^7.4.3"
+  },
+  "main": "electron/main.cjs",
+  "devDependencies": {
+    "electron": "^35.1.5",
+    "electron-builder": "^26.0.12",
+    "@capacitor/cli": "^7.4.3"
+  },
+  "build": {
+    "appId": "com.nexovonarsa.apkforgeai",
+    "productName": "APKForge AI",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "server/**/*",
+      "public/**/*",
+      "electron/**/*",
+      "package.json",
+      "node_modules/**/*",
+      "!workspace/**/*",
+      "!release/**/*"
+    ],
+    "asar": true,
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        },
+        {
+          "target": "msi",
+          "arch": [
+            "x64"
+          ]
+        }
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true
+    },
+    "msi": {
+      "oneClick": false,
+      "perMachine": false
+    }
   }
 }
