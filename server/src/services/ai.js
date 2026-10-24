@@ -22,8 +22,20 @@ export async function proposePatch({ request, fileInventory = [], currentFiles =
   if (!response.ok) throw new Error(`AI provider returned HTTP ${response.status}`);
   const data = await readAiJsonResponse(response);
   const content = data.choices?.[0]?.message?.content;
-  if (!content) throw new Error("AI provider returned no message content");
-  return { configured:true, proposal:content };
+  if (typeof content !== "string" || !content.trim()) throw new Error("AI provider returned no message content");
+  const parsed = parseModelJson(content);
+  if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) throw new Error("AI planner response must be a JSON object.");
+  if (typeof parsed.summary !== "string" || !parsed.summary.trim()) throw new Error("AI planner response is missing a summary.");
+  for (const key of ["files_to_change", "patch", "risks", "tests"]) {
+    if (!(key in parsed)) throw new Error(`AI planner response is missing required field: ${key}.`);
+  }
+  if (!Array.isArray(parsed.files_to_change) || !Array.isArray(parsed.risks) || !Array.isArray(parsed.tests)) {
+    throw new Error("AI planner response fields files_to_change, risks, and tests must be arrays.");
+  }
+  if (typeof parsed.patch !== "string" && (!parsed.patch || typeof parsed.patch !== "object" || Array.isArray(parsed.patch))) {
+    throw new Error("AI planner response patch must be a string or JSON object.");
+  }
+  return { configured:true, proposal:JSON.stringify(parsed) };
 }
 
 
@@ -122,9 +134,9 @@ export async function proposeProjectPatch({ request, currentFiles = [], learnedC
     signal: AbortSignal.timeout(aiTimeoutMs())
   });
   if (!response.ok) throw new Error(`AI provider returned HTTP ${response.status}`);
-  const data = await response.json();
+  const data = await readAiJsonResponse(response);
   const content = data.choices?.[0]?.message?.content;
-  if (!content) throw new Error("AI provider returned no message content");
+  if (typeof content !== "string" || !content.trim()) throw new Error("AI provider returned no message content");
   const parsed = parseModelJson(content);
   if (!parsed || typeof parsed.summary !== "string" || !Array.isArray(parsed.files)) {
     throw new Error("AI proposal did not match the required JSON structure.");
