@@ -21,3 +21,13 @@ The APK bundles the dashboard UI, while the processing API remains a server comp
 - Download `apkforge-ai-android-debug-apk` for `.apk`.
 
 The workflow has been committed as configuration; artifacts are only available after the workflow successfully runs. A successful package build does not replace real-device and Windows installation tests.
+## APK signing for projects edited in the workbench
+
+To enable the **Sign & verify APK** button, install Android Build Tools containing `apksigner` on the server and set these values in the server's private `.env`:
+
+- `APKFORGE_KEYSTORE_PATH`: path to a keystore file stored securely on the server.
+- `APKFORGE_KEY_ALIAS`: alias of the signing key.
+- `APKFORGE_KEYSTORE_PASSWORD`: keystore password.
+- `APKFORGE_KEY_PASSWORD`: private-key password.
+
+Never commit the keystore or these values. Signing keys must remain under your control. The app verifies the signature after signing, but you must still test the resulting APK on a device.
