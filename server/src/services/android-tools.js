@@ -3,7 +3,7 @@ import path from "node:path";
 
 const TOOL_NAMES = { apktool:process.env.APKTOOL_BIN||"apktool", jadx:process.env.JADX_BIN||"jadx", apksigner:process.env.APKSIGNER_BIN||"apksigner" };
 
-export function runAndroidTool(tool, args, { cwd, timeoutMs = 300000 } = {}) {
+export function runAndroidTool(tool, args, { cwd, timeoutMs = 300000, env: extraEnv = {} } = {}) {
   if (!Object.hasOwn(TOOL_NAMES, tool)) throw new Error("Tool is not allowlisted");
   if (!Array.isArray(args) || args.some(arg => typeof arg !== "string")) throw new Error("Arguments must be an array of strings");
   return new Promise((resolve,reject)=>{
