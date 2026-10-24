@@ -8,7 +8,7 @@ import path from "node:path";
 import { validateUploadName, storeUpload } from "./services/archive.js";
 import { proposePatch, proposeProjectPatch } from "./services/ai.js";
 import { inspectUploadedArchive } from "./services/inspect.js";
-import { decodeApk, listProjectFiles, readProjectFile, editProjectFile, undoProjectFile, buildApk } from "./services/project.js";
+import { decodeApk, listProjectFiles, readProjectFile, editProjectFile, undoProjectFile, replaceProjectAsset, buildApk } from "./services/project.js";
 import { fileURLToPath } from "node:url";
 const publicDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../public");
 
@@ -22,7 +22,7 @@ app.use(helmet({ contentSecurityPolicy: { directives: { ...helmet.contentSecurit
 app.use(cors({origin:process.env.CORS_ORIGIN||false}));
 app.use(express.json({limit:"2mb"}));
 app.use(express.static(publicDir, { extensions: ["html"] }));
-const upload=multer({dest:path.join(workspace,"incoming"),limits:maxUploadBytes>0?{fileSize:maxUploadBytes,files:1}:{files:1}});
+const upload=multer({dest:path.join(workspace,"incoming"),limits:maxUploadBytes>0?{fileSize:maxUploadBytes,files:1}:{files:1}});\nconst assetUpload=multer({dest:path.join(workspace,"incoming"),limits:{fileSize:100*1024*1024,files:1}});
 
 app.get("/api/health",(_req,res)=>res.json({name:"APKForge AI",status:"online",version:"0.1.0",uploadLimitBytes:maxUploadBytes||null,note:"Null means no application-level cap; infrastructure and disk limits still apply."}));
 app.post("/api/uploads",upload.single("file"),async(req,res,next)=>{
@@ -39,6 +39,7 @@ app.get("/api/projects/:id/files",async(req,res,next)=>{ try { res.json(await li
 app.get("/api/projects/:id/file",async(req,res,next)=>{ try { const filePath=String(req.query.path||""); if(!filePath)return res.status(400).json({error:"Provide a relative file path in the path query."}); res.json(await readProjectFile(workspace,req.params.id,filePath)); } catch(error) { next(error); } });
 app.put("/api/projects/:id/file",async(req,res,next)=>{ try { const filePath=String(req.body?.path||""); if(!filePath)return res.status(400).json({error:"Provide a relative file path."}); res.json(await editProjectFile(workspace,req.params.id,filePath,req.body?.content)); } catch(error) { next(error); } });
 app.post("/api/projects/:id/undo",async(req,res,next)=>{ try { const filePath=String(req.body?.path||""); if(!filePath)return res.status(400).json({error:"Provide a relative file path."}); res.json(await undoProjectFile(workspace,req.params.id,filePath)); } catch(error) { next(error); } });
+app.put("/api/projects/:id/asset",assetUpload.single("file"),async(req,res,next)=>{ try { const filePath=String(req.body?.path||""); if(!filePath)return res.status(400).json({error:"Provide a relative destination path."}); res.json(await replaceProjectAsset(workspace,req.params.id,filePath,req.file)); } catch(error) { if(req.file?.path)await fs.rm(req.file.path,{force:true}).catch(()=>{}); next(error); } });
 app.post("/api/projects/:id/build",async(req,res,next)=>{ try { res.json(await buildApk(workspace,req.params.id)); } catch(error) { next(error); } });
 app.post("/api/projects/:id/ai/patch-plan",async(req,res,next)=>{
   try{
