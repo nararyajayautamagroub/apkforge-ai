@@ -2,7 +2,7 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import crypto from "node:crypto";
 
-const ALLOWED_EXTENSIONS = new Set([".apk", ".apks", ".aab", ".obb", ".zip", ".apfproj"]);
+const ALLOWED_EXTENSIONS = new Set([".apk", ".apks", ".aab", ".obb", ".zip", ".apfproj", ".exe", ".msi"]);
 
 export function validateUploadName(name = "") {
   const ext = path.extname(name).toLowerCase();
