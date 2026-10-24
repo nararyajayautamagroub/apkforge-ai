@@ -81,6 +81,32 @@ export async function editProjectFile(workspace,id,relativePath,content) {
   await fs.writeFile(target,content,"utf8");
   return {path:relativePath,size:Buffer.byteLength(content,"utf8"),message:"Text file updated. Previous version backed up; use Undo to restore it."};
 }
+export async function applyProjectPatch(workspace,id,files) {
+  if(!Array.isArray(files)||files.length<1||files.length>5) throw new Error("AI patch must contain between 1 and 5 files.");
+  const seen=new Set();
+  const prepared=[];
+  for(const item of files) {
+    if(!item||typeof item.path!=="string"||typeof item.proposedContent!=="string") throw new Error("Every patch item must contain a path and proposedContent.");
+    if(seen.has(item.path)) throw new Error("AI patch contains a duplicate file path.");
+    seen.add(item.path);
+    if(Buffer.byteLength(item.proposedContent,"utf8")>MAX_EDIT_BYTES) throw new Error("Each proposed file must be 2 MiB or smaller.");
+    const current=await readProjectFile(workspace,id,item.path);
+    prepared.push({path:item.path,target:inside(inside(path.join(workspace,"projects"),id),item.path),oldContent:current.content,newContent:item.proposedContent});
+  }
+  for(const item of prepared) await backupFile(workspace,id,item.path,item.target);
+  const written=[];
+  try {
+    for(const item of prepared) {
+      await fs.writeFile(item.target,item.newContent,"utf8");
+      written.push(item);
+    }
+  } catch(error) {
+    for(const item of written.reverse()) await fs.writeFile(item.target,item.oldContent,"utf8").catch(()=>{});
+    throw error;
+  }
+  return {updated:prepared.map(item=>({path:item.path,size:Buffer.byteLength(item.newContent,"utf8")})),message:"AI patch applied to all listed files. Review changes and run validation/build tests before use."};
+}
+
 export async function undoProjectFile(workspace,id,relativePath) {
   await readProjectFile(workspace,id,relativePath);
   const root=inside(path.join(workspace,"projects"),id);
