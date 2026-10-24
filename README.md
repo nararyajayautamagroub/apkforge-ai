@@ -1,20 +1,22 @@
 # APKForge AI
 
-APKForge AI is a browser-based workbench starter for inspecting Android package archives and planning authorized modifications to apps and game assets you own or have permission to edit.
+APKForge AI is a browser-based workbench for inspecting Android package archives and planning authorized modifications to apps and game assets you own or have permission to edit.
 
-## Implemented in this repository
+## Implemented workflow
 
-- Responsive Indonesian dashboard served by the Node.js API.
-- Upload endpoint for `.apk`, `.apks`, `.aab`, `.obb`, `.zip`, and `.apfproj`.
-- ZIP-compatible archive listing for uploaded files, including APK/AAB and OBB files that are standard ZIP containers.
-- Archive preview caps: 5,000 entries and 2 GiB total declared uncompressed size. Preview does not extract or alter the uploaded file.
+- Responsive Indonesian web dashboard.
+- Upload `.apk`, `.apks`, `.aab`, `.obb`, `.zip`, and `.apfproj`.
+- ZIP-compatible archive listing without extracting the archive. Preview safety caps: 5,000 entries and 2 GiB total declared uncompressed size.
+- APK decode into a workspace using Apktool, when Apktool and Java are installed on the host.
+- Project file listing and editing for selected text formats (XML, JSON, text, properties, Smali, HTML, JS, CSS, Java/Kotlin, YAML and config files), limited to 2 MiB per file.
+- Rebuild decoded projects into an **unsigned APK** using Apktool.
 - AI change-plan endpoint compatible with chat-completions style providers.
-- Allowlisted Android tool process helper for Apktool, JADX, and apksigner.
-- Configurable app-level upload size cap. `MAX_UPLOAD_BYTES=0` removes the app-level cap only; host, reverse proxy, storage, memory and disk limits still apply.
+- Allowlisted process helper for Apktool, JADX, and apksigner.
+- GitHub Actions syntax validation.
 
 ## Run locally
 
-Requirements: Node.js 20 or newer.
+Requirements: Node.js 20+, Java runtime, and Apktool for decode/build features.
 
 ```bash
 npm install
@@ -23,26 +25,30 @@ npm run check
 npm run dev
 ```
 
-Open `http://127.0.0.1:8787`.
+Open `http://127.0.0.1:8787`. On Windows, use `copy .env.example .env` if `cp` is unavailable.
 
-On Windows, use `copy .env.example .env` in Command Prompt if `cp` is unavailable.
-
-## AI configuration
-
-Set `AI_BASE_URL`, `AI_API_KEY`, and `AI_MODEL` in `.env` for an OpenAI-compatible provider. Never commit API keys. Without a provider, the API returns a local planning response rather than performing model-powered code changes.
+Set `AI_BASE_URL`, `AI_API_KEY`, and `AI_MODEL` in `.env` for an OpenAI-compatible provider. Never commit API keys.
 
 ## API
 
-- `GET /api/health` — service status and configured upload limit.
-- `GET /api/formats` — supported input/output notes.
-- `POST /api/uploads` — upload one file using multipart field `file`.
-- `GET /api/uploads/:id/inspect` — list entries in ZIP-compatible uploads.
+- `GET /api/health` — service status.
+- `GET /api/formats` — supported formats and limitations.
+- `POST /api/uploads` — upload one file as multipart field `file`.
+- `GET /api/uploads/:id/inspect` — preview entries of ZIP-compatible uploads.
+- `POST /api/uploads/:id/decode` — decode an uploaded APK with Apktool.
+- `GET /api/projects/:id/files` — list decoded project files.
+- `GET /api/projects/:id/file?path=...` — read an editable text file.
+- `PUT /api/projects/:id/file` — JSON body: `{ "path": "res/values/strings.xml", "content": "..." }`.
+- `POST /api/projects/:id/build` — build unsigned APK.
+- `GET /api/projects/:id/artifact` — download generated unsigned APK.
 - `POST /api/ai/plan` — generate a change plan from JSON `{ "request": "..." }`.
 
-## Important: what is not complete yet
+## Current limitations (read before production)
 
-This repository is **not a finished universal APK modder**. It currently uploads and previews archive contents and can produce AI change plans. It does not yet apply arbitrary AI-generated patches, edit Android manifests/resources through a full UI, replace vehicle models/textures in a game-specific format, rebuild and sign modified APKs end-to-end, or generate native Windows EXE/MAU outputs.
+This is a functional development workflow, **not a completed universal APK modder**. Decode/build depends on the host having Apktool and Java installed. Rebuilt output is unsigned. The project editor edits text files only; it does not automatically replace 3D models, textures, vehicle assets, or arbitrary binary resources. The AI endpoint currently plans changes; it does not apply AI-generated patches automatically. JADX and apksigner helpers are not wired into a complete GUI workflow.
 
-An APK cannot be converted directly into a native Windows EXE by renaming or repackaging it. A Windows version generally requires a compatible runtime/wrapper or a separate port. OBB files may use proprietary formats, encryption, or game-specific structures that cannot be edited generically. Those features need the target game's format, suitable toolchain, test fixtures, and runtime verification before they can honestly be marked complete.
+An APK cannot be directly converted into a native Windows EXE. A Windows release generally requires porting or rebuilding for Windows or a compatible wrapper/runtime. OBB files may be proprietary, encrypted, or game-specific; generic archive preview cannot interpret all OBB data.
 
-Use only files and assets you are authorized to modify. Do not use this project to bypass DRM, licensing, anti-cheat, or access controls. Uploaded files are treated as data and are not executed by the server.
+Before exposing the service to the internet, add authentication, per-user project isolation, rate limits, quotas, malware scanning, background job queue, and a hardened container/sandbox for Android tooling. Set an explicit upload cap for public deployments. `MAX_UPLOAD_BYTES=0` disables only the app-level cap; disk, proxy and host limits remain.
+
+Use only software and assets you are authorized to modify. Do not use this project to bypass DRM, licensing, anti-cheat, or access controls. Never execute uploaded binaries on the server.
