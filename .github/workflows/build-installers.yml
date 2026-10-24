@@ -55,6 +55,8 @@ jobs:
         run: npm install
       - name: Validate source
         run: npm run check
+      - name: Run unit tests
+        run: npm test
       - name: Create Capacitor Android project
         run: npx cap add android
       - name: Sync web assets
