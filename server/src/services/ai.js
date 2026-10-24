@@ -18,9 +18,9 @@ export async function proposePatch({ request, fileInventory = [], currentFiles =
     body:JSON.stringify({ model:AI_MODEL, messages:[
       {role:"system",content:"Return valid JSON only. Propose reviewable patches; never claim an untested build works."},
       {role:"user",content:prompt}], temperature:0.2 }),
-    signal:AbortSignal.timeout(60000) });
+    signal:AbortSignal.timeout(aiTimeoutMs()) });
   if (!response.ok) throw new Error(`AI provider returned HTTP ${response.status}`);
-  const data = await response.json();
+  const data = await readAiJsonResponse(response);
   const content = data.choices?.[0]?.message?.content;
   if (!content) throw new Error("AI provider returned no message content");
   return { configured:true, proposal:content };
@@ -28,6 +28,61 @@ export async function proposePatch({ request, fileInventory = [], currentFiles =
 
 
 const MAX_PATCH_BYTES = 2 * 1024 * 1024;
+const DEFAULT_AI_TIMEOUT_MS = 60_000;
+const DEFAULT_AI_RESPONSE_BYTES = 1 * 1024 * 1024;
+
+function boundedEnvInt(name, fallback, min, max) {
+  const raw = Number.parseInt(process.env[name] || "", 10);
+  return Number.isFinite(raw) ? Math.min(max, Math.max(min, raw)) : fallback;
+}
+
+function aiTimeoutMs() {
+  return boundedEnvInt("AI_TIMEOUT_MS", DEFAULT_AI_TIMEOUT_MS, 1_000, 180_000);
+}
+
+async function readAiJsonResponse(response) {
+  const maxBytes = boundedEnvInt("AI_MAX_RESPONSE_BYTES", DEFAULT_AI_RESPONSE_BYTES, 1_024, 8 * 1024 * 1024);
+  const declaredLength = Number(response.headers.get("content-length"));
+  if (Number.isFinite(declaredLength) && declaredLength > maxBytes) {
+    await response.body?.cancel();
+    throw new Error(`AI provider response exceeds the configured ${maxBytes}-byte limit.`);
+  }
+  if (!response.body) throw new Error("AI provider returned an empty response body.");
+  const reader = response.body.getReader();
+  const chunks = [];
+  let total = 0;
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      total += value.byteLength;
+      if (total > maxBytes) {
+        await reader.cancel();
+        throw new Error(`AI provider response exceeds the configured ${maxBytes}-byte limit.`);
+      }
+      chunks.push(value);
+    }
+  } finally {
+    reader.releaseLock();
+  }
+  let text;
+  try {
+    text = new TextDecoder("utf-8", { fatal: true }).decode(
+      chunks.reduce((buffer, chunk) => {
+        buffer.set(chunk, buffer.offset);
+        buffer.offset += chunk.byteLength;
+        return buffer;
+      }, Object.assign(new Uint8Array(total), { offset: 0 }))
+    );
+  } catch {
+    throw new Error("AI provider returned a response that is not valid UTF-8.");
+  }
+  try {
+    return JSON.parse(text);
+  } catch {
+    throw new Error("AI provider returned invalid JSON.");
+  }
+}
 
 function parseModelJson(content) {
   const cleaned = String(content || "").trim().replace(/^\x60{3}(?:json)?\s*/i, "").replace(/\s*\x60{3}$/i, "");
@@ -64,7 +119,7 @@ export async function proposeProjectPatch({ request, currentFiles = [], learnedC
       { role: "system", content: "You are a cautious code-editing assistant. Return valid JSON only and never claim untested changes work." },
       { role: "user", content: prompt }
     ], temperature: 0.1 }),
-    signal: AbortSignal.timeout(60000)
+    signal: AbortSignal.timeout(aiTimeoutMs())
   });
   if (!response.ok) throw new Error(`AI provider returned HTTP ${response.status}`);
   const data = await response.json();
