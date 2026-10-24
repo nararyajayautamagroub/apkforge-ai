@@ -5,6 +5,7 @@ import helmet from "helmet";
 import multer from "multer";
 import fs from "node:fs/promises";
 import path from "node:path";
+import { timingSafeEqual } from "node:crypto";
 import { validateUploadName, storeUpload } from "./services/archive.js";
 import { proposePatch, proposeProjectPatch } from "./services/ai.js";
 import { loadRelevantLearning, recordAiLearning } from "./services/ai-memory.js";
@@ -22,6 +23,26 @@ await fs.mkdir(path.join(workspace,"incoming"),{recursive:true});
 app.use(helmet({ contentSecurityPolicy: { directives: { ...helmet.contentSecurityPolicy.getDefaultDirectives(), "script-src": ["'self'", "'unsafe-inline'"], "style-src": ["'self'", "'unsafe-inline'"], "connect-src": ["'self'", "https:", "http://127.0.0.1:*", "http://localhost:*"] } } }));
 app.use(cors({origin:process.env.CORS_ORIGIN||false}));
 app.use(express.json({limit:"2mb"}));
+
+// Optional shared bearer token for single-operator deployments. Production fails
+// closed when no token is configured; /api/health remains available for probes.
+// This is not per-user authorization or workspace isolation.
+const apiAuthToken=String(process.env.API_AUTH_TOKEN||"");
+app.use("/api",(req,res,next)=>{
+  if(req.path==="/health")return next();
+  if(!apiAuthToken){
+    if(process.env.NODE_ENV==="production")return res.status(503).json({error:"API is not configured securely. Set API_AUTH_TOKEN before enabling production API access."});
+    return next();
+  }
+  const authorization=String(req.get("authorization")||"");
+  const match=authorization.match(/^Bearer\\s+(.+)$/i);
+  const supplied=match?.[1]||"";
+  const expectedBytes=Buffer.from(apiAuthToken);
+  const suppliedBytes=Buffer.from(supplied);
+  const valid=expectedBytes.length===suppliedBytes.length&&timingSafeEqual(expectedBytes,suppliedBytes);
+  if(!valid)return res.status(401).json({error:"Missing or invalid API bearer token."});
+  next();
+});
 
 // Lightweight per-process API rate limit. Excludes health polling so the UI can
 // keep reporting live status. Configure a shared limiter and proxy limits for
