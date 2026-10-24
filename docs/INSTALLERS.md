@@ -4,7 +4,7 @@ APKForge AI has a Windows desktop shell and a Capacitor Android shell.
 
 ## Windows
 
-Run `npm install`, then `npm run desktop:win` on Windows. Electron Builder produces a Windows installer executable (`.exe`) and a Windows Installer package (`.msi`) under `release/`.
+Run `npm install`, then `npm run desktop:win` on Windows. Electron Builder produces a Windows installer executable (`.exe`) and an MSI-wrapped NSIS installer (`.msi`) under `release/`. The MSI wraps the normal Windows installer rather than using a separate native WiX installer; this avoids a reproducible missing-icon failure in the native MSI build.
 
 The desktop shell starts the local Node/Express API. Android tooling such as Java and Apktool must still be installed separately for APK decode/rebuild features.
 
