@@ -149,3 +149,25 @@ export async function undoProjectAsset(workspace,id,relativePath) {
   const stat=await fs.stat(target);
   return {path:relativePath,size:stat.size,message:"Previous asset restored. The replaced version was saved in history."};
 }
+
+export async function signBuiltApk(workspace,id) {
+  safeProjectId(id);
+  const keystore=process.env.APKFORGE_KEYSTORE_PATH;
+  const alias=process.env.APKFORGE_KEY_ALIAS;
+  const storePassword=process.env.APKFORGE_KEYSTORE_PASSWORD;
+  const keyPassword=process.env.APKFORGE_KEY_PASSWORD;
+  if(!keystore||!alias||!storePassword||!keyPassword) throw new Error("APK signing is not configured. Set APKFORGE_KEYSTORE_PATH, APKFORGE_KEY_ALIAS, APKFORGE_KEYSTORE_PASSWORD and APKFORGE_KEY_PASSWORD on the server.");
+  await fs.access(keystore);
+  const outDir=path.join(workspace,"builds");
+  const unsigned=path.join(outDir,id+"-unsigned.apk");
+  await fs.access(unsigned);
+  const signed=path.join(outDir,id+"-signed.apk");
+  await fs.rm(signed,{force:true});
+  await runAndroidTool("apksigner",["sign","--ks",path.resolve(keystore),"--ks-key-alias",alias,"--ks-pass","env:APKFORGE_KEYSTORE_PASSWORD","--key-pass","env:APKFORGE_KEY_PASSWORD","--out",signed,unsigned],{
+    timeoutMs:Number(process.env.JOB_TIMEOUT_MS||300000),
+    env:{APKFORGE_KEYSTORE_PASSWORD:storePassword,APKFORGE_KEY_PASSWORD:keyPassword}
+  });
+  await runAndroidTool("apksigner",["verify","--verbose",signed],{timeoutMs:Number(process.env.JOB_TIMEOUT_MS||300000)});
+  const stat=await fs.stat(signed);
+  return {projectId:id,artifact:{name:path.basename(signed),size:stat.size,signed:true},message:"APK signed and signature verification passed. Install and test on a device before distributing."};
+}
