@@ -22,3 +22,15 @@ $("replaceAsset").onclick=async()=>{
     await refreshFiles();
   }catch(error){$("assetStatus").textContent=error.message}finally{button.disabled=false}
 };
+
+$("undoAsset").onclick=async()=>{
+  if(!projectId){$("assetStatus").textContent="Buka project APK terlebih dahulu.";return}
+  const path=$("assetPath").value.trim();
+  if(!path){$("assetStatus").textContent="Masukkan path aset yang ingin dipulihkan.";return}
+  if(!confirm("Pulihkan backup terakhir untuk aset ini?"))return;
+  try{
+    const response=await fetch("/api/projects/"+encodeURIComponent(projectId)+"/asset/undo",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({path})});
+    const data=await response.json();if(!response.ok)throw Error(data.error||"Undo aset gagal");
+    $("assetStatus").textContent=data.message;
+  }catch(error){$("assetStatus").textContent=error.message}
+};
