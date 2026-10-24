@@ -67,13 +67,13 @@ async function readAiJsonResponse(response) {
   }
   let text;
   try {
-    text = new TextDecoder("utf-8", { fatal: true }).decode(
-      chunks.reduce((buffer, chunk) => {
-        buffer.set(chunk, buffer.offset);
-        buffer.offset += chunk.byteLength;
-        return buffer;
-      }, Object.assign(new Uint8Array(total), { offset: 0 }))
-    );
+    const bytes = new Uint8Array(total);
+    let offset = 0;
+    for (const chunk of chunks) {
+      bytes.set(chunk, offset);
+      offset += chunk.byteLength;
+    }
+    text = new TextDecoder("utf-8", { fatal: true }).decode(bytes);
   } catch {
     throw new Error("AI provider returned a response that is not valid UTF-8.");
   }
