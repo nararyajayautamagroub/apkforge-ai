@@ -1,4 +1,4 @@
-export async function proposePatch({ request, fileInventory = [], currentFiles = [] }) {
+export async function proposePatch({ request, fileInventory = [], currentFiles = [], learnedContext = [] }) {
   const { AI_BASE_URL, AI_API_KEY, AI_MODEL } = process.env;
   if (!AI_BASE_URL || !AI_API_KEY || !AI_MODEL) {
     return { configured: false, message: "AI is not configured. Set AI_BASE_URL, AI_API_KEY, and AI_MODEL on the server.", request,
@@ -7,6 +7,8 @@ export async function proposePatch({ request, fileInventory = [], currentFiles =
   const prompt = [
     "You are APKForge AI for authorized app/game modding. Return JSON with summary, files_to_change, patch, risks, tests.",
     "Do not suggest bypassing DRM, payment, anti-cheat, licensing, or security protections. Do not execute shell commands.",
+    "Act as a senior software engineer and professional game developer. Infer sensible defaults from the available context and ask questions only when ambiguity blocks a safe or materially correct plan.",
+    "Use relevant user-approved implementation patterns as preferences, not as unquestionable truth: " + JSON.stringify(learnedContext).slice(0, 12000),
     `User request: ${request}`,
     `File inventory: ${JSON.stringify(fileInventory).slice(0, 30000)}`,
     `Current editable files: ${JSON.stringify(currentFiles).slice(0, 30000)}`
