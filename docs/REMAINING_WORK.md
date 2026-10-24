@@ -31,10 +31,16 @@ This checklist separates features that currently work in the development workflo
 - [ ] Add format-specific adapters for supported texture/model/audio formats and validate each with known fixtures. A generic file replacement is not proof of game-engine compatibility.
 - [ ] Improve APK/OBB inspection with clear per-format support and explicit encrypted/proprietary-format errors.
 - [ ] Add diff preview, staged patch validation, transactional multi-file apply, and rollback tests for AI proposals.
-- [x] Add configurable AI provider timeouts (`AI_TIMEOUT_MS`, default 60 seconds, clamped to 1–180 seconds) and bounded provider JSON response size (`AI_MAX_RESPONSE_BYTES`, default 1 MiB, clamped to 1 KiB–8 MiB); project patch proposals validate structure and allowed paths.\n- [ ] Add broader AI provider contract tests, strict schema validation for the legacy patch-planner response, and user-visible AI error-state verification.
+- [x] Add configurable AI provider timeouts (`AI_TIMEOUT_MS`, default 60 seconds, clamped to 1–180 seconds), bounded provider JSON response size (`AI_MAX_RESPONSE_BYTES`, default 1 MiB, clamped to 1 KiB–8 MiB) across both AI flows, strict legacy planner response validation, and project patch proposal structure/allowed-path validation.
+- [ ] Add broader AI provider contract tests and user-visible AI error-state verification.
 - [ ] Add platform-specific testing for Windows installers and the Android shell on real devices.
 
-## AI provider configuration\n- `AI_TIMEOUT_MS` sets the AI provider request timeout in milliseconds (default `60000`, clamped to `1000`–`180000`).\n- `AI_MAX_RESPONSE_BYTES` sets the maximum buffered AI provider JSON response (default `1048576`, clamped to `1024`–`8388608`). Oversized or invalid JSON responses are rejected.\n- These controls harden provider calls but do not configure or deploy an AI provider. Real-time AI availability still depends on valid server-side `AI_BASE_URL`, `AI_API_KEY`, `AI_MODEL`, network access, and provider uptime.\n\n## Rate-limit configuration
+## AI provider configuration
+- `AI_TIMEOUT_MS` sets the AI provider request timeout in milliseconds (default `60000`, clamped to `1000`–`180000`).
+- `AI_MAX_RESPONSE_BYTES` sets the maximum buffered AI provider JSON response (default `1048576`, clamped to `1024`–`8388608`). Oversized or invalid JSON responses are rejected.
+- These controls harden provider calls but do not configure or deploy an AI provider. Real-time AI availability still depends on valid server-side `AI_BASE_URL`, `AI_API_KEY`, `AI_MODEL`, network access, and provider uptime.
+
+## Rate-limit configuration
 - `API_RATE_MAX` sets the allowed requests per IP per window (default `120`).
 - `API_RATE_WINDOW_MS` sets the window length in milliseconds (default `60000`).
 - The in-memory limiter is per process and is not a substitute for a shared store or reverse-proxy protection on a public, multi-instance deployment. Avoid enabling `trust proxy` unless the proxy chain is explicitly configured.
