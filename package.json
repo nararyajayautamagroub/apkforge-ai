@@ -1,0 +1,22 @@
+{
+  "name": "apkforge-ai",
+  "version": "0.1.0",
+  "private": true,
+  "description": "AI-assisted Android package inspection and authorized modding workbench",
+  "type": "module",
+  "engines": { "node": ">=20" },
+  "scripts": {
+    "dev": "node --watch server/src/index.js",
+    "start": "node server/src/index.js",
+    "worker": "node worker/index.js",
+    "check": "node --check server/src/index.js && node --check server/src/services/archive.js && node --check server/src/services/ai.js && node --check server/src/services/android-tools.js"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2",
+    "helmet": "^8.0.0",
+    "multer": "^2.0.0",
+    "zod": "^3.24.1"
+  }
+}
