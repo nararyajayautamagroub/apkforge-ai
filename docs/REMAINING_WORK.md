@@ -10,7 +10,8 @@ This checklist separates features that currently work in the development workflo
 - Windows packaging uses `--publish never`; artifacts are uploaded by Actions instead of requiring a GitHub release token.
 
 ## Priority 0 — Before exposing the API publicly
-- [ ] Add authentication and authorization to every project, upload, build, signing, AI, and undo endpoint.
+- [ ] Add per-user authentication/authorization to every project, upload, build, signing, AI, and undo endpoint, with workspace isolation.
+- [x] Add optional shared bearer-token protection for single-operator API deployments; production API requests fail closed when `API_AUTH_TOKEN` is missing. This is only a baseline, not per-user authorization.
 - [ ] Enforce per-user workspace isolation; never let one user access another user's upload, project, backups, or artifacts.
 - [x] Enforce a default 100 MiB upload-size cap in the API; operators can override it with `MAX_UPLOAD_BYTES`.
 - [x] Add configurable per-process API rate limiting (default 120 requests per 60 seconds per IP; `/api/health` excluded) and apply the configured upload cap to asset uploads.
@@ -41,6 +42,8 @@ This checklist separates features that currently work in the development workflo
 - These controls harden provider calls but do not configure or deploy an AI provider. Real-time AI availability still depends on valid server-side `AI_BASE_URL`, `AI_API_KEY`, `AI_MODEL`, network access, and provider uptime.
 
 ## Rate-limit configuration
+- `API_AUTH_TOKEN` enables shared `Authorization: Bearer <token>` protection for `/api/*` except `/api/health`. In `NODE_ENV=production`, API requests fail with `503` when the token is unset. Use a long random secret and keep it server-side; this is not a substitute for per-user identities, authorization, or workspace isolation.
+- `.env.example` now uses `MAX_UPLOAD_BYTES=104857600` (100 MiB) to match the API's default cap; `0` would unintentionally set a zero-byte limit.
 - `API_RATE_MAX` sets the allowed requests per IP per window (default `120`).
 - `API_RATE_WINDOW_MS` sets the window length in milliseconds (default `60000`).
 - The in-memory limiter is per process and is not a substitute for a shared store or reverse-proxy protection on a public, multi-instance deployment. Avoid enabling `trust proxy` unless the proxy chain is explicitly configured.
