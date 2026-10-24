@@ -22,9 +22,37 @@ await fs.mkdir(path.join(workspace,"incoming"),{recursive:true});
 app.use(helmet({ contentSecurityPolicy: { directives: { ...helmet.contentSecurityPolicy.getDefaultDirectives(), "script-src": ["'self'", "'unsafe-inline'"], "style-src": ["'self'", "'unsafe-inline'"], "connect-src": ["'self'", "https:", "http://127.0.0.1:*", "http://localhost:*"] } } }));
 app.use(cors({origin:process.env.CORS_ORIGIN||false}));
 app.use(express.json({limit:"2mb"}));
+
+// Lightweight per-process API rate limit. Excludes health polling so the UI can
+// keep reporting live status. Configure a shared limiter and proxy limits for
+// multi-instance/public deployments.
+const apiRateWindowMs=Math.max(10000,Number(process.env.API_RATE_WINDOW_MS)||60000);
+const apiRateMax=Math.max(10,Number(process.env.API_RATE_MAX)||120);
+const apiRateBuckets=new Map();
+let lastRateCleanup=Date.now();
+app.use("/api",(req,res,next)=>{
+  if(req.path==="/health")return next();
+  const now=Date.now();
+  if(now-lastRateCleanup>Math.min(apiRateWindowMs,300000)){
+    for(const [key,bucket] of apiRateBuckets)if(now-bucket.startedAt>=apiRateWindowMs)apiRateBuckets.delete(key);
+    lastRateCleanup=now;
+  }
+  const key=req.ip||req.socket.remoteAddress||"unknown";
+  let bucket=apiRateBuckets.get(key);
+  if(!bucket||now-bucket.startedAt>=apiRateWindowMs){bucket={startedAt:now,count:0};apiRateBuckets.set(key,bucket);}
+  bucket.count++;
+  res.set("RateLimit-Limit",String(apiRateMax));
+  res.set("RateLimit-Remaining",String(Math.max(0,apiRateMax-bucket.count)));
+  res.set("RateLimit-Reset",String(Math.ceil((bucket.startedAt+apiRateWindowMs)/1000)));
+  if(bucket.count>apiRateMax){
+    res.set("Retry-After",String(Math.max(1,Math.ceil((bucket.startedAt+apiRateWindowMs-now)/1000))));
+    return res.status(429).json({error:"API request limit reached. Retry after the current rate-limit window.",retryAfterSeconds:Math.max(1,Math.ceil((bucket.startedAt+apiRateWindowMs-now)/1000))});
+  }
+  next();
+});
 app.use(express.static(publicDir, { extensions: ["html"] }));
 const upload=multer({dest:path.join(workspace,"incoming"),limits:{fileSize:maxUploadBytes,files:1}});
-const assetUpload=multer({dest:path.join(workspace,"incoming"),limits:{fileSize:100*1024*1024,files:1}});
+const assetUpload=multer({dest:path.join(workspace,"incoming"),limits:{fileSize:maxUploadBytes,files:1}});
 
 const serverStartedAt=Date.now();
 app.get("/api/health",(_req,res)=>res.set("Cache-Control","no-store").json({name:"APKForge AI",status:"online",version:"0.1.0",serverTime:new Date().toISOString(),uptimeSeconds:Math.floor((Date.now()-serverStartedAt)/1000),memoryBytes:process.memoryUsage().rss,uploadLimitBytes:maxUploadBytes,note:"Application upload cap is enforced; configure MAX_UPLOAD_BYTES to override."}));
