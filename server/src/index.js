@@ -7,6 +7,8 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import { validateUploadName, storeUpload } from "./services/archive.js";
 import { proposePatch } from "./services/ai.js";
+import { fileURLToPath } from "node:url";
+const publicDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../public");
 
 const app=express();
 const port=Number(process.env.PORT||8787);
@@ -17,6 +19,7 @@ await fs.mkdir(path.join(workspace,"incoming"),{recursive:true});
 app.use(helmet());
 app.use(cors({origin:process.env.CORS_ORIGIN||false}));
 app.use(express.json({limit:"2mb"}));
+app.use(express.static(publicDir, { extensions: ["html"] }));
 const upload=multer({dest:path.join(workspace,"incoming"),limits:maxUploadBytes>0?{fileSize:maxUploadBytes,files:1}:{files:1}});
 
 app.get("/api/health",(_req,res)=>res.json({name:"APKForge AI",status:"online",version:"0.1.0",uploadLimitBytes:maxUploadBytes||null,note:"Null means no application-level cap; infrastructure and disk limits still apply."}));
