@@ -130,3 +130,22 @@ export async function replaceProjectAsset(workspace,id,relativePath,uploadFile) 
   const stat=await fs.stat(target);
   return {path:relativePath,size:stat.size,message:"Asset replaced. Verify the target game supports this format, encoding, dimensions and internal naming before rebuilding."};
 }
+
+export async function undoProjectAsset(workspace,id,relativePath) {
+  safeProjectId(id);
+  if(!ASSET_EXTENSIONS.has(path.extname(relativePath).toLowerCase())) throw new Error("Path is not a supported asset file.");
+  const root=inside(path.join(workspace,"projects"),id);
+  await fs.access(path.join(root,".apkforge-project.json"));
+  const target=inside(root,relativePath);
+  const backup=inside(path.join(workspace,"backups",id),relativePath);
+  await fs.access(backup);
+  const current=await fs.readFile(target).catch(error=>error.code==="ENOENT"?Buffer.alloc(0):Promise.reject(error));
+  const stamp=new Date().toISOString().replace(/[:.]/g,"-");
+  const history=inside(path.join(workspace,"history",id),relativePath+"."+stamp+".bak");
+  await fs.mkdir(path.dirname(history),{recursive:true});
+  await fs.writeFile(history,current);
+  await fs.copyFile(backup,target);
+  await fs.rm(backup,{force:true});
+  const stat=await fs.stat(target);
+  return {path:relativePath,size:stat.size,message:"Previous asset restored. The replaced version was saved in history."};
+}
