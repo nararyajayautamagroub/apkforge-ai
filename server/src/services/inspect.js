@@ -33,7 +33,7 @@ export async function inspectUploadedArchive(workspace, id) {
         if (peOffset >= 64 && peOffset + 24 <= stat.size && peOffset + 24 <= header.length) {
           const sig = Buffer.alloc(24);
           await handle.read(sig, 0, sig.length, peOffset);
-          if (sig.toString("ascii", 0, 4) === "PE\\0\\0") {
+          if (sig[0] === 0x50 && sig[1] === 0x45 && sig[2] === 0 && sig[3] === 0) {
             const machine = sig.readUInt16LE(4);
             const machineNames = { 0x014c: "x86", 0x8664: "x64", 0xaa64: "ARM64", 0x01c4: "ARM" };
             pe = { machine: machineNames[machine] || `unknown (0x${machine.toString(16)})`, sections: sig.readUInt16LE(6), optionalHeaderBytes: sig.readUInt16LE(20) };
