@@ -8,6 +8,8 @@ import path from "node:path";
 import { validateUploadName, storeUpload } from "./services/archive.js";
 import { proposePatch } from "./services/ai.js";
 import { inspectUploadedArchive } from "./services/inspect.js";
+import { decodeApk, listProjectFiles, readProjectFile, editProjectFile, buildApk } from "./services/project.js";
+import { runAndroidTool } from "./services/android-tools.js";
 import { fileURLToPath } from "node:url";
 const publicDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../public");
 
@@ -33,6 +35,12 @@ app.post("/api/uploads",upload.single("file"),async(req,res,next)=>{
   }catch(error){if(req.file?.path)await fs.rm(req.file.path,{force:true}).catch(()=>{});next(error);}
 });
 app.get("/api/uploads/:id/inspect",async(req,res,next)=>{ try { res.json(await inspectUploadedArchive(workspace, req.params.id)); } catch(error) { next(error); } });
+app.post("/api/uploads/:id/decode",async(req,res,next)=>{ try { res.status(201).json(await decodeApk(workspace,req.params.id)); } catch(error) { next(error); } });
+app.get("/api/projects/:id/files",async(req,res,next)=>{ try { res.json(await listProjectFiles(workspace,req.params.id)); } catch(error) { next(error); } });
+app.get("/api/projects/:id/file",async(req,res,next)=>{ try { const filePath=String(req.query.path||""); if(!filePath)return res.status(400).json({error:"Provide a relative file path in the path query."}); res.json(await readProjectFile(workspace,req.params.id,filePath)); } catch(error) { next(error); } });
+app.put("/api/projects/:id/file",async(req,res,next)=>{ try { const filePath=String(req.body?.path||""); if(!filePath)return res.status(400).json({error:"Provide a relative file path."}); res.json(await editProjectFile(workspace,req.params.id,filePath,req.body?.content)); } catch(error) { next(error); } });
+app.post("/api/projects/:id/build",async(req,res,next)=>{ try { res.json(await buildApk(workspace,req.params.id)); } catch(error) { next(error); } });
+app.get("/api/projects/:id/artifact",async(req,res,next)=>{ try { if(!/^[0-9a-f-]{36}$/i.test(req.params.id))return res.status(400).json({error:"Invalid project id."}); const artifact=path.join(workspace,"builds",req.params.id+"-unsigned.apk"); await fs.access(artifact); res.download(artifact,path.basename(artifact)); } catch(error) { next(error); } });
 app.post("/api/ai/plan",async(req,res,next)=>{
   try{
     const request=String(req.body?.request||"").trim();
