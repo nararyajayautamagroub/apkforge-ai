@@ -35,7 +35,7 @@ app.use("/api",(req,res,next)=>{
     return next();
   }
   const authorization=String(req.get("authorization")||"");
-  const match=authorization.match(/^Bearer\\s+(.+)$/i);
+  const match=authorization.match(/^Bearer\s+(.+)$/i);
   const supplied=match?.[1]||"";
   const expectedBytes=Buffer.from(apiAuthToken);
   const suppliedBytes=Buffer.from(supplied);
